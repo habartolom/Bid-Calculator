@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bidcalculator-postgres
+    environment:
+      POSTGRES_DB: bidcalculator
+      POSTGRES_USER: bidcalc_user
+      POSTGRES_PASSWORD: bidcalc_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bidcalc_user -d bidcalculator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bidcalculator-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bidcalculator-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - BIDCALC_DB_CONNECTION=Host=postgres;Port=5432;Database=bidcalculator;Username=bidcalc_user;Password=bidcalc_password;
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bidcalculator-network
+    restart: on-failure
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  bidcalculator-network:
+    driver: bridge
+
