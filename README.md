@@ -1,5 +1,10 @@
 # 🚗 Vehicle Bid Calculator
 
+## 🟢 **Live Demo:** 
+The final solution is already deployed and fully functional at [**bid-calculator.khronomarket.com**](https://bid-calculator.khronomarket.com/)
+You can explore the working version of the project there before running it locally.
+
+
 ## 🚀 Quick start with Docker (using Docker Compose)
 
 
