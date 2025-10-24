@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bidcalculator-postgres
+    environment:
+      POSTGRES_DB: bidcalculator
+      POSTGRES_USER: bidcalc_user
+      POSTGRES_PASSWORD: bidcalc_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bidcalc_user -d bidcalculator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bidcalculator-network
+    restart: unless-stopped
+
+  # Backend API (.NET)
+  backend:
+    build:
+      context: ./Progi.BidCalculator.BE
+      dockerfile: Dockerfile
+    container_name: bidcalculator-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - BIDCALC_DB_CONNECTION=Host=postgres;Port=5432;Database=bidcalculator;Username=bidcalc_user;Password=bidcalc_password;
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bidcalculator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/BidCalculator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # Frontend (Vue.js + Vite)
+  frontend:
+    build:
+      context: ./Progi.BidCalculator.FE
+      dockerfile: Dockerfile
+    container_name: bidcalculator-frontend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - bidcalculator-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  bidcalculator-network:
+    driver: bridge
+
